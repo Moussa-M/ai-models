@@ -371,20 +371,38 @@ export function LLMIntelligenceGrid() {
 
       if (addToExisting) {
         if (existingIndex >= 0) {
-          const newConfigs = [...prev]
-          newConfigs[existingIndex] = {
-            ...newConfigs[existingIndex],
-            direction: newConfigs[existingIndex].direction === "asc" ? "desc" : "asc",
+          const currentDirection = prev[existingIndex].direction
+          if (currentDirection === "desc") {
+            // Third click: remove this sort
+            return prev.filter((s) => s.key !== key)
+          } else {
+            // Second click: toggle to desc
+            const newConfigs = [...prev]
+            newConfigs[existingIndex] = {
+              ...newConfigs[existingIndex],
+              direction: "desc",
+            }
+            return newConfigs
           }
-          return newConfigs
         } else {
+          // First click: add with asc
           return [...prev, { key, direction: "asc" }]
         }
       } else {
         if (existingIndex >= 0 && prev.length === 1) {
-          return [{ key, direction: prev[0].direction === "asc" ? "desc" : "asc" }]
+          // This is the only sort config
+          const currentDirection = prev[existingIndex].direction
+          if (currentDirection === "desc") {
+            // Third click: remove sort (go back to no sort)
+            return []
+          } else {
+            // Second click: toggle to desc
+            return [{ key, direction: "desc" }]
+          }
+        } else {
+          // First click or different column: set as only sort with asc
+          return [{ key, direction: "asc" }]
         }
-        return [{ key, direction: "asc" }]
       }
     })
   }
