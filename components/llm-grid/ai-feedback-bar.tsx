@@ -2,11 +2,11 @@
 
 interface AIFeedbackBarProps {
   summary: string
-  appliedFilters: string[]
+  appliedFilters?: string[]
   onClear: () => void
 }
 
-export function AIFeedbackBar({ summary, appliedFilters, onClear }: AIFeedbackBarProps) {
+export function AIFeedbackBar({ summary, appliedFilters = [], onClear }: AIFeedbackBarProps) {
   const getTagClass = (filter: string) => {
     if (filter.startsWith("Provider")) return "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
     if (
