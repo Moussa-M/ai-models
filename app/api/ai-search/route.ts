@@ -44,14 +44,23 @@ const FilterSchema = z.object({
 // Provider alias mapping for better matching
 const PROVIDER_ALIASES: Record<string, string[]> = {
   google: ["google_ai_studio", "gemini", "vertex_ai", "vertex_ai-chat-models", "vertex_ai-vision-models", "vertex_ai-language-models", "vertex_ai-code-text-models", "vertex_ai-code-chat-models"],
-  openai: ["openai", "text-completion-openai", "azure", "azure_ai"],
+  openai: ["openai", "text-completion-openai"],
   anthropic: ["anthropic", "vertex_ai-anthropic_models"],
-  meta: ["meta_llama", "ollama", "vertex_ai-llama_models"],
+  meta: ["meta_llama", "vertex_ai-llama_models"],
+  llama: ["meta_llama", "ollama", "ollama_chat", "vertex_ai-llama_models"],
+  ollama: ["ollama", "ollama_chat"],
   mistral: ["mistral", "codestral", "text-completion-codestral", "vertex_ai-mistral_models"],
   amazon: ["bedrock", "amazon_nova", "bedrock_converse", "sagemaker"],
+  aws: ["bedrock", "amazon_nova", "bedrock_converse", "sagemaker"],
   microsoft: ["azure", "azure_ai", "azure_text"],
+  azure: ["azure", "azure_ai", "azure_text"],
   cohere: ["cohere", "cohere_chat"],
   deepseek: ["deepseek", "vertex_ai-deepseek_models"],
+  groq: ["groq"],
+  together: ["together_ai"],
+  perplexity: ["perplexity"],
+  xai: ["xai"],
+  grok: ["xai"],
 }
 
 function buildPrompt(query: string, metadata: any): string {
@@ -70,16 +79,22 @@ AVAILABLE DATA:
 - Models with web search: ${metadata.capabilityCounts.webSearch}
 - Models with prompt caching: ${metadata.capabilityCounts.promptCaching}
 
-PROVIDER ALIASES (use these to expand common names):
-- "google" → google_ai_studio, gemini, vertex_ai, vertex_ai-chat-models, vertex_ai-vision-models
-- "openai" → openai, text-completion-openai, azure, azure_ai
-- "anthropic" → anthropic, vertex_ai-anthropic_models
-- "meta" or "llama" → meta_llama, ollama, vertex_ai-llama_models
+PROVIDER ALIASES (use these to expand common names to EXACT provider names):
+- "google" or "gemini" → google_ai_studio, gemini, vertex_ai, vertex_ai-chat-models, vertex_ai-vision-models
+- "openai" or "gpt" → openai, text-completion-openai
+- "anthropic" or "claude" → anthropic, vertex_ai-anthropic_models
+- "meta" or "llama" → meta_llama, ollama, ollama_chat, vertex_ai-llama_models
+- "ollama" → ollama, ollama_chat
 - "mistral" → mistral, codestral, vertex_ai-mistral_models
-- "amazon" or "aws" → bedrock, amazon_nova, bedrock_converse, sagemaker
+- "amazon" or "aws" or "bedrock" → bedrock, amazon_nova, bedrock_converse, sagemaker
 - "microsoft" or "azure" → azure, azure_ai, azure_text
 - "cohere" → cohere, cohere_chat
 - "deepseek" → deepseek, vertex_ai-deepseek_models
+- "groq" → groq
+- "together" → together_ai
+- "xai" or "grok" → xai
+
+IMPORTANT: When user mentions a provider name, find ALL matching providers from the AVAILABLE DATA list above. Only include providers that actually exist in the available list.
 
 USER QUERY: "${query}"
 
@@ -149,6 +164,22 @@ EXAMPLES:
     "sortBy": { "key": "inputCost", "direction": "asc" },
     "showColumns": ["provider", "mode", "inputCost", "outputCost"],
     "summary": "OpenAI chat models under $1/M tokens"
+  }
+
+- "ollama vision models" ->
+  {
+    "filters": { "provider": ["ollama", "ollama_chat"], "mode": [], "vision": true, "audio": false, "functionCalling": false, "reasoning": false, "webSearch": false, "promptCaching": false, "maxInputCost": 999999, "maxOutputCost": 999999, "minContext": 0, "minOutputTokens": 0, "excludeDeprecated": false },
+    "sortBy": { "key": "inputCost", "direction": "asc" },
+    "showColumns": ["provider", "vision", "inputCost"],
+    "summary": "Ollama models with vision capability"
+  }
+
+- "cheap vision models" ->
+  {
+    "filters": { "provider": [], "mode": [], "vision": true, "audio": false, "functionCalling": false, "reasoning": false, "webSearch": false, "promptCaching": false, "maxInputCost": 1, "maxOutputCost": 999999, "minContext": 0, "minOutputTokens": 0, "excludeDeprecated": false },
+    "sortBy": { "key": "inputCost", "direction": "asc" },
+    "showColumns": ["provider", "vision", "inputCost", "outputCost"],
+    "summary": "Cheap vision models under $1/M tokens"
   }`
 }
 
