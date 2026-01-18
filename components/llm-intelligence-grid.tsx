@@ -710,7 +710,13 @@ export function LLMIntelligenceGrid() {
           hasActiveFilters={hasActiveFilters}
           onClearFilters={clearAllFilters}
         />
-        {aiFilterSummary && <AIFeedbackBar summary={aiFilterSummary.summary} appliedFilters={aiFilterSummary.appliedFilters} onClear={clearAIFilters} />}
+        {aiFilterSummary && (
+          <AIFeedbackBar
+            summary={aiFilterSummary.summary}
+            appliedFilters={aiFilterSummary.appliedFilters}
+            onClear={clearAIFilters}
+          />
+        )}
         {viewMode === "calculator" && (
           <CostCalculator
             inputTokens={inputTokens}

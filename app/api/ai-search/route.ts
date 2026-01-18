@@ -10,18 +10,21 @@ const ollama = createOllama({
   },
 })
 
+// Fallback model string for Vercel AI Gateway (OpenAI)
+const FALLBACK_MODEL = "openai/gpt-4o-mini"
+
 const FilterSchema = z.object({
   filters: z.object({
     // List filters - these INCLUDE the specified values  
     provider: z.array(z.string()).describe("Provider values to INCLUDE (all others excluded). Empty array means no filter."),
     mode: z.array(z.string()).describe("Mode values to INCLUDE (all others excluded). Empty array means no filter."),
     // Boolean filters - true means "only show models with this capability"
-    vision: z.boolean().describe("Set true to show only models with vision, false for no filter"),
-    audio: z.boolean().describe("Set true to show only models with audio, false for no filter"),
-    functionCalling: z.boolean().describe("Set true to show only models with function calling, false for no filter"),
-    reasoning: z.boolean().describe("Set true to show only models with reasoning, false for no filter"),
-    webSearch: z.boolean().describe("Set true to show only models with web search, false for no filter"),
-    promptCaching: z.boolean().describe("Set true to show only models with prompt caching, false for no filter"),
+    vision: z.boolean().optional().describe("Set true to show only models with vision"),
+    audio: z.boolean().optional().describe("Set true to show only models with audio"),
+    functionCalling: z.boolean().optional().describe("Set true to show only models with function calling"),
+    reasoning: z.boolean().optional().describe("Set true to show only models with reasoning"),
+    webSearch: z.boolean().optional().describe("Set true to show only models with web search"),
+    promptCaching: z.boolean().optional().describe("Set true to show only models with prompt caching"),
     // Range filters
     maxInputCost: z.number().describe("Maximum input cost per 1M tokens in dollars. Use 999999 for no limit."),
     maxOutputCost: z.number().describe("Maximum output cost per 1M tokens in dollars. Use 999999 for no limit."),
@@ -35,7 +38,7 @@ const FilterSchema = z.object({
     direction: z.enum(["asc", "desc"]).describe("Sort direction: asc for ascending, desc for descending"),
   }),
   // Columns to make visible based on the query
-  showColumns: z.array(z.string()).describe("Column keys to make visible. Empty array means use defaults."),
+  showColumns: z.array(z.string()).optional().describe("Column keys to make visible"),
   // Human-readable summary of the filters
   summary: z.string().describe("Brief summary of applied filters for display"),
 })
@@ -95,7 +98,7 @@ COLUMN KEYS for showColumns:
 INSTRUCTIONS:
 1. For "provider" filter: Return array of EXACT provider names from the available list that MATCH the query. Use the PROVIDER ALIASES above to expand common names like "google" to all Google-related providers. Use empty array [] if not filtering by provider.
 
-2. For capability filters (vision, audio, functionCalling, reasoning, webSearch, promptCaching): Set to true ONLY if the user explicitly wants that capability. Use false otherwise.
+2. For capability filters (vision, audio, functionCalling, reasoning, webSearch, promptCaching): Set to true ONLY if the user explicitly wants that capability.
 
 3. For "maxInputCost": Set a dollar amount per 1M tokens if user mentions budget/cheap/affordable (e.g., 0.5 for very cheap, 1 for cheap, 5 for mid-range). Use 999999 for no limit.
 
@@ -142,7 +145,7 @@ EXAMPLES:
     summary: "OpenAI chat models under $1/M tokens"
   }
 
-Always include all filter properties with appropriate default values.`,
+Return only relevant filters. Don't include filters if the user didn't mention them.`,
     })
 
     return Response.json(object)
