@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@ai-sdk/openai':
-        specifier: ^3.0.12
-        version: 3.0.12(zod@3.25.76)
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.60.0(react@19.2.0))
@@ -131,9 +128,6 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      ollama-ai-provider-v2:
-        specifier: ^3.0.1
-        version: 3.0.1(ai@6.0.39(zod@3.25.76))(zod@3.25.76)
       react:
         specifier: 19.2.0
         version: 19.2.0
@@ -200,12 +194,6 @@ packages:
 
   '@ai-sdk/gateway@3.0.16':
     resolution: {integrity: sha512-OOY5CfRJiHvh/8np2vs1RQaCZ5hWv2qOeEmmeiABXK3gLQHUVnCO+1hhoLsZdHM5iElu6M407dAOfyvTsKJqcQ==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
-
-  '@ai-sdk/openai@3.0.12':
-    resolution: {integrity: sha512-zqLWEKuaKnjXhu7xCw1jgz/+yTbd3F7EtgU4T2Q8BAo8OJC5wZv14l+kwM7Jai7M1/2Y2T/zBkrfiIu+7NsvfQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -1582,14 +1570,6 @@ packages:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
     engines: {node: '>=0.10.0'}
 
-  ollama-ai-provider-v2@3.0.1:
-    resolution: {integrity: sha512-TLErAjK1B4JuE4I/5AwNp/DNcTKZ1cvyzgLVNDmN59WyeVB4QaphNq5wYihWTi2Uso3JLgSi+xFRCCC2dOqxFQ==}
-    engines: {node: '>=18'}
-    deprecated: Version number bumped accidentally; no breaking changes. Safe to use.
-    peerDependencies:
-      ai: ^5.0.0 || ^6.0.0
-      zod: ^4.0.16
-
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
@@ -1825,12 +1805,6 @@ snapshots:
       '@ai-sdk/provider': 3.0.4
       '@ai-sdk/provider-utils': 4.0.8(zod@3.25.76)
       '@vercel/oidc': 3.1.0
-      zod: 3.25.76
-
-  '@ai-sdk/openai@3.0.12(zod@3.25.76)':
-    dependencies:
-      '@ai-sdk/provider': 3.0.4
-      '@ai-sdk/provider-utils': 4.0.8(zod@3.25.76)
       zod: 3.25.76
 
   '@ai-sdk/provider-utils@4.0.8(zod@3.25.76)':
@@ -3099,13 +3073,6 @@ snapshots:
   normalize-range@0.1.2: {}
 
   object-assign@4.1.1: {}
-
-  ollama-ai-provider-v2@3.0.1(ai@6.0.39(zod@3.25.76))(zod@3.25.76):
-    dependencies:
-      '@ai-sdk/provider': 3.0.4
-      '@ai-sdk/provider-utils': 4.0.8(zod@3.25.76)
-      ai: 6.0.39(zod@3.25.76)
-      zod: 3.25.76
 
   picocolors@1.1.1: {}
 
