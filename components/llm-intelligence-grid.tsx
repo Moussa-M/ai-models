@@ -87,7 +87,10 @@ export function LLMIntelligenceGrid() {
   const [isHydrated, setIsHydrated] = useState(false)
   const [aiFilterSummary, setAiFilterSummary] = useState<AIFilterSummary | null>(null)
   const [maxInputCostFilter, setMaxInputCostFilter] = useState<number | null>(null)
+  const [maxOutputCostFilter, setMaxOutputCostFilter] = useState<number | null>(null)
   const [minContextFilter, setMinContextFilter] = useState<number | null>(null)
+  const [minOutputTokensFilter, setMinOutputTokensFilter] = useState<number | null>(null)
+  const [excludeDeprecatedFilter, setExcludeDeprecatedFilter] = useState<boolean>(false)
 
   useEffect(() => {
     // Load stored values from localStorage
@@ -260,6 +263,21 @@ export function LLMIntelligenceGrid() {
       filtered = filtered.filter((m) => (m.max_input_tokens || 0) >= minContextFilter)
     }
 
+    if (maxOutputCostFilter !== null) {
+      filtered = filtered.filter((m) => {
+        const costPerMillion = (m.output_cost_per_token || 0) * 1000000
+        return costPerMillion <= maxOutputCostFilter
+      })
+    }
+
+    if (minOutputTokensFilter !== null) {
+      filtered = filtered.filter((m) => (m.max_output_tokens || 0) >= minOutputTokensFilter)
+    }
+
+    if (excludeDeprecatedFilter) {
+      filtered = filtered.filter((m) => !m.deprecation_date)
+    }
+
     if (columnFilters.provider && columnFilters.provider.length > 0) {
       if ((columnFilters as any)._providerIncludeMode) {
         filtered = filtered.filter((m) =>
@@ -363,7 +381,7 @@ export function LLMIntelligenceGrid() {
     })
 
     return filtered
-  }, [models, sortConfigs, inputTokens, outputTokens, columnFilters, maxInputCostFilter, minContextFilter])
+  }, [models, sortConfigs, inputTokens, outputTokens, columnFilters, maxInputCostFilter, maxOutputCostFilter, minContextFilter, minOutputTokensFilter, excludeDeprecatedFilter])
 
   const handleSort = (key: SortKey, addToExisting: boolean) => {
     setSortConfigs((prev) => {
@@ -505,11 +523,18 @@ export function LLMIntelligenceGrid() {
         appliedFilters.push("Caching: Yes")
       }
 
-      if (filters.maxInputCost) {
+      if (filters.maxInputCost && filters.maxInputCost < 999999) {
         setMaxInputCostFilter(filters.maxInputCost)
-        appliedFilters.push(`Max Cost: $${filters.maxInputCost}/M`)
+        appliedFilters.push(`Max Input: $${filters.maxInputCost}/M`)
       } else {
         setMaxInputCostFilter(null)
+      }
+
+      if (filters.maxOutputCost && filters.maxOutputCost < 999999) {
+        setMaxOutputCostFilter(filters.maxOutputCost)
+        appliedFilters.push(`Max Output: $${filters.maxOutputCost}/M`)
+      } else {
+        setMaxOutputCostFilter(null)
       }
 
       if (filters.minContext) {
@@ -519,7 +544,36 @@ export function LLMIntelligenceGrid() {
         setMinContextFilter(null)
       }
 
+      if (filters.minOutputTokens) {
+        setMinOutputTokensFilter(filters.minOutputTokens)
+        appliedFilters.push(`Min Output: ${formatTokens(filters.minOutputTokens)}`)
+      } else {
+        setMinOutputTokensFilter(null)
+      }
+
+      if (filters.excludeDeprecated) {
+        setExcludeDeprecatedFilter(true)
+        appliedFilters.push("Active Only")
+      } else {
+        setExcludeDeprecatedFilter(false)
+      }
+
       setColumnFilters(newColumnFilters)
+
+      // Apply AI-suggested sorting
+      if (data.sortBy && data.sortBy.key) {
+        const sortKeyMap: Record<string, SortKey> = {
+          inputCost: "input_cost_per_token",
+          outputCost: "output_cost_per_token",
+          context: "max_input_tokens",
+          maxOutput: "max_output_tokens",
+          provider: "litellm_provider",
+          model: "id",
+        }
+        const mappedKey = sortKeyMap[data.sortBy.key] || (data.sortBy.key as SortKey)
+        setSortConfigs([{ key: mappedKey, direction: data.sortBy.direction }])
+        appliedFilters.push(`Sort: ${data.sortBy.key} ${data.sortBy.direction}`)
+      }
 
       if (showColumns && showColumns.length > 0) {
         setColumns((prev) =>
@@ -578,18 +632,24 @@ export function LLMIntelligenceGrid() {
     setColumnFilters({})
     setAiFilterSummary(null)
     setMaxInputCostFilter(null)
+    setMaxOutputCostFilter(null)
     setMinContextFilter(null)
+    setMinOutputTokensFilter(null)
+    setExcludeDeprecatedFilter(false)
   }
 
   const hasActiveFilters = useMemo(() => {
     const hasColumnFilters = Object.values(columnFilters).some((arr) => arr.length > 0)
-    return hasColumnFilters || aiFilterSummary !== null || maxInputCostFilter !== null || minContextFilter !== null
-  }, [columnFilters, aiFilterSummary, maxInputCostFilter, minContextFilter])
+    return hasColumnFilters || aiFilterSummary !== null || maxInputCostFilter !== null || maxOutputCostFilter !== null || minContextFilter !== null || minOutputTokensFilter !== null || excludeDeprecatedFilter
+  }, [columnFilters, aiFilterSummary, maxInputCostFilter, maxOutputCostFilter, minContextFilter, minOutputTokensFilter, excludeDeprecatedFilter])
 
   const clearAIFilters = () => {
     setAiFilterSummary(null)
     setMaxInputCostFilter(null)
+    setMaxOutputCostFilter(null)
     setMinContextFilter(null)
+    setMinOutputTokensFilter(null)
+    setExcludeDeprecatedFilter(false)
     setColumnFilters({})
   }
 
