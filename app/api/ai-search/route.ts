@@ -1,5 +1,6 @@
-import { generateObject } from "ai"
+import { generateObject, generateText } from "ai"
 import { createOllama } from "ollama-ai-provider-v2"
+import { openai } from "@ai-sdk/openai"
 import { z } from "zod"
 
 // Create Ollama Cloud provider
@@ -10,21 +11,18 @@ const ollama = createOllama({
   },
 })
 
-// Fallback model string for Vercel AI Gateway (OpenAI)
-const FALLBACK_MODEL = "openai/gpt-4o-mini"
-
 const FilterSchema = z.object({
   filters: z.object({
     // List filters - these INCLUDE the specified values  
     provider: z.array(z.string()).describe("Provider values to INCLUDE (all others excluded). Empty array means no filter."),
     mode: z.array(z.string()).describe("Mode values to INCLUDE (all others excluded). Empty array means no filter."),
     // Boolean filters - true means "only show models with this capability"
-    vision: z.boolean().optional().describe("Set true to show only models with vision"),
-    audio: z.boolean().optional().describe("Set true to show only models with audio"),
-    functionCalling: z.boolean().optional().describe("Set true to show only models with function calling"),
-    reasoning: z.boolean().optional().describe("Set true to show only models with reasoning"),
-    webSearch: z.boolean().optional().describe("Set true to show only models with web search"),
-    promptCaching: z.boolean().optional().describe("Set true to show only models with prompt caching"),
+    vision: z.boolean().describe("Set true to show only models with vision, false otherwise"),
+    audio: z.boolean().describe("Set true to show only models with audio, false otherwise"),
+    functionCalling: z.boolean().describe("Set true to show only models with function calling, false otherwise"),
+    reasoning: z.boolean().describe("Set true to show only models with reasoning, false otherwise"),
+    webSearch: z.boolean().describe("Set true to show only models with web search, false otherwise"),
+    promptCaching: z.boolean().describe("Set true to show only models with prompt caching, false otherwise"),
     // Range filters
     maxInputCost: z.number().describe("Maximum input cost per 1M tokens in dollars. Use 999999 for no limit."),
     maxOutputCost: z.number().describe("Maximum output cost per 1M tokens in dollars. Use 999999 for no limit."),
@@ -38,7 +36,7 @@ const FilterSchema = z.object({
     direction: z.enum(["asc", "desc"]).describe("Sort direction: asc for ascending, desc for descending"),
   }),
   // Columns to make visible based on the query
-  showColumns: z.array(z.string()).optional().describe("Column keys to make visible"),
+  showColumns: z.array(z.string()).describe("Column keys to make visible based on query relevance"),
   // Human-readable summary of the filters
   summary: z.string().describe("Brief summary of applied filters for display"),
 })
@@ -56,14 +54,8 @@ const PROVIDER_ALIASES: Record<string, string[]> = {
   deepseek: ["deepseek", "vertex_ai-deepseek_models"],
 }
 
-export async function POST(req: Request) {
-  const { query, metadata } = await req.json()
-
-  try {
-    const { object } = await generateObject({
-      model: ollama("gemma3:12b-cloud"),
-      schema: FilterSchema,
-      prompt: `You are a filter generator for an LLM model comparison table. Convert the user's natural language query into column filters.
+function buildPrompt(query: string, metadata: any): string {
+  return `You are a filter generator for an LLM model comparison table. Convert the user's natural language query into column filters.
 
 AVAILABLE DATA:
 - Providers (exact names): ${metadata.providers.slice(0, 50).join(", ")}${metadata.providers.length > 50 ? "..." : ""}
@@ -98,7 +90,7 @@ COLUMN KEYS for showColumns:
 INSTRUCTIONS:
 1. For "provider" filter: Return array of EXACT provider names from the available list that MATCH the query. Use the PROVIDER ALIASES above to expand common names like "google" to all Google-related providers. Use empty array [] if not filtering by provider.
 
-2. For capability filters (vision, audio, functionCalling, reasoning, webSearch, promptCaching): Set to true ONLY if the user explicitly wants that capability.
+2. For capability filters (vision, audio, functionCalling, reasoning, webSearch, promptCaching): Set to true ONLY if the user explicitly wants that capability, false otherwise.
 
 3. For "maxInputCost": Set a dollar amount per 1M tokens if user mentions budget/cheap/affordable (e.g., 0.5 for very cheap, 1 for cheap, 5 for mid-range). Use 999999 for no limit.
 
@@ -120,41 +112,115 @@ INSTRUCTIONS:
 
 10. For "summary": Write a brief description like "Google models with vision support" or "Cheap models under $1/M tokens".
 
+Return valid JSON matching this exact schema:
+{
+  "filters": {
+    "provider": string[],
+    "mode": string[],
+    "vision": boolean,
+    "audio": boolean,
+    "functionCalling": boolean,
+    "reasoning": boolean,
+    "webSearch": boolean,
+    "promptCaching": boolean,
+    "maxInputCost": number,
+    "maxOutputCost": number,
+    "minContext": number,
+    "minOutputTokens": number,
+    "excludeDeprecated": boolean
+  },
+  "sortBy": { "key": string, "direction": "asc" | "desc" },
+  "showColumns": string[],
+  "summary": string
+}
+
 EXAMPLES:
 - "cheapest vision models from google" -> 
   {
-    filters: { provider: ["google_ai_studio", "gemini", "vertex_ai-chat-models", "vertex_ai-vision-models"], vision: true, maxInputCost: 999999, maxOutputCost: 999999, audio: false, functionCalling: false, reasoning: false, webSearch: false, promptCaching: false, mode: [], minContext: 0, minOutputTokens: 0, excludeDeprecated: false },
-    sortBy: { key: "inputCost", direction: "asc" },
-    showColumns: ["provider", "inputCost", "vision"],
-    summary: "Google models with vision, sorted by price"
-  }
-
-- "models with reasoning and large context" ->
-  {
-    filters: { reasoning: true, provider: [], mode: [], vision: false, audio: false, functionCalling: false, webSearch: false, promptCaching: false, maxInputCost: 999999, maxOutputCost: 999999, minContext: 100000, minOutputTokens: 0, excludeDeprecated: false },
-    sortBy: { key: "context", direction: "desc" },
-    showColumns: ["provider", "reasoning", "context"],
-    summary: "Reasoning models with 100k+ context"
+    "filters": { "provider": ["google_ai_studio", "gemini", "vertex_ai-chat-models", "vertex_ai-vision-models"], "mode": [], "vision": true, "audio": false, "functionCalling": false, "reasoning": false, "webSearch": false, "promptCaching": false, "maxInputCost": 999999, "maxOutputCost": 999999, "minContext": 0, "minOutputTokens": 0, "excludeDeprecated": false },
+    "sortBy": { "key": "inputCost", "direction": "asc" },
+    "showColumns": ["provider", "inputCost", "vision"],
+    "summary": "Google models with vision, sorted by price"
   }
 
 - "cheap openai chat models under $1" ->
   {
-    filters: { provider: ["openai"], mode: ["chat"], vision: false, audio: false, functionCalling: false, reasoning: false, webSearch: false, promptCaching: false, maxInputCost: 1, maxOutputCost: 999999, minContext: 0, minOutputTokens: 0, excludeDeprecated: false },
-    sortBy: { key: "inputCost", direction: "asc" },
-    showColumns: ["provider", "mode", "inputCost", "outputCost"],
-    summary: "OpenAI chat models under $1/M tokens"
+    "filters": { "provider": ["openai"], "mode": ["chat"], "vision": false, "audio": false, "functionCalling": false, "reasoning": false, "webSearch": false, "promptCaching": false, "maxInputCost": 1, "maxOutputCost": 999999, "minContext": 0, "minOutputTokens": 0, "excludeDeprecated": false },
+    "sortBy": { "key": "inputCost", "direction": "asc" },
+    "showColumns": ["provider", "mode", "inputCost", "outputCost"],
+    "summary": "OpenAI chat models under $1/M tokens"
+  }`
+}
+
+/**
+ * Parse JSON that might be wrapped in markdown code blocks
+ */
+function parseJSONResponse(text: string): unknown {
+  // Try direct parse first
+  try {
+    return JSON.parse(text)
+  } catch {
+    // Try to extract JSON from markdown code blocks
+    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[1].trim())
+    }
+    // Try to find JSON object pattern
+    const objectMatch = text.match(/\{[\s\S]*\}/)
+    if (objectMatch) {
+      return JSON.parse(objectMatch[0])
+    }
+    throw new Error("Could not parse JSON from response")
   }
+}
 
-Return only relevant filters. Don't include filters if the user didn't mention them.`,
+export async function POST(req: Request) {
+  const { query, metadata } = await req.json()
+  const prompt = buildPrompt(query, metadata)
+
+  // Try Ollama Cloud first
+  try {
+    const { text } = await generateText({
+      model: ollama("gemma3:12b-cloud"),
+      prompt,
     })
-
-    return Response.json(object)
-  } catch (error) {
-    console.error("AI search error:", error)
-    return Response.json({ 
-      filters: {}, 
-      sortBy: { key: "inputCost", direction: "asc" },
-      summary: "Failed to parse query" 
-    }, { status: 500 })
+    
+    const parsed = parseJSONResponse(text)
+    const validated = FilterSchema.parse(parsed)
+    return Response.json(validated)
+  } catch (ollamaError) {
+    console.warn("Ollama Cloud failed, falling back to OpenAI:", ollamaError)
+    
+    // Fallback to OpenAI with structured output
+    try {
+      const { object } = await generateObject({
+        model: openai("gpt-4o-mini"),
+        schema: FilterSchema,
+        prompt,
+      })
+      return Response.json(object)
+    } catch (openaiError) {
+      console.error("OpenAI fallback also failed:", openaiError)
+      return Response.json({ 
+        filters: {
+          provider: [],
+          mode: [],
+          vision: false,
+          audio: false,
+          functionCalling: false,
+          reasoning: false,
+          webSearch: false,
+          promptCaching: false,
+          maxInputCost: 999999,
+          maxOutputCost: 999999,
+          minContext: 0,
+          minOutputTokens: 0,
+          excludeDeprecated: false,
+        },
+        sortBy: { key: "inputCost", direction: "asc" },
+        showColumns: [],
+        summary: "Failed to parse query" 
+      }, { status: 500 })
+    }
   }
 }
