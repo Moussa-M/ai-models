@@ -1,95 +1,218 @@
-import { generateObject } from "ai"
 import { z } from "zod"
 
 const FilterSchema = z.object({
   filters: z.object({
-    // List filters - these EXCLUDE the specified values
-    provider: z.array(z.string()).optional().describe("Provider values to INCLUDE (all others excluded)"),
-    mode: z.array(z.string()).optional().describe("Mode values to INCLUDE (all others excluded)"),
-    // Boolean filters - true means "only show models with this capability"
-    vision: z.boolean().optional().describe("Set true to show only models with vision"),
-    audio: z.boolean().optional().describe("Set true to show only models with audio"),
-    functionCalling: z.boolean().optional().describe("Set true to show only models with function calling"),
-    reasoning: z.boolean().optional().describe("Set true to show only models with reasoning"),
-    webSearch: z.boolean().optional().describe("Set true to show only models with web search"),
-    promptCaching: z.boolean().optional().describe("Set true to show only models with prompt caching"),
-    // Range filters
-    maxInputCost: z.number().optional().describe("Maximum input cost per 1M tokens in dollars"),
-    minContext: z.number().optional().describe("Minimum context window in tokens"),
+    // ───────────────── Providers & Mode ─────────────────
+    provider: z
+      .array(z.string())
+      .optional()
+      .describe("Exact litellm_provider values to INCLUDE"),
+
+    mode: z
+      .array(
+        z.enum([
+          "chat",
+          "embedding",
+          "completion",
+          "image_generation",
+          "audio_transcription",
+          "audio_speech",
+          "moderation",
+          "rerank",
+          "search",
+        ])
+      )
+      .optional()
+      .describe("Model modes to INCLUDE"),
+
+    // ───────────────── Capabilities ─────────────────
+    supports: z
+      .object({
+        vision: z.boolean().optional(),
+        audio_input: z.boolean().optional(),
+        audio_output: z.boolean().optional(),
+        function_calling: z.boolean().optional(),
+        parallel_function_calling: z.boolean().optional(),
+        reasoning: z.boolean().optional(),
+        web_search: z.boolean().optional(),
+        prompt_caching: z.boolean().optional(),
+        response_schema: z.boolean().optional(),
+        system_messages: z.boolean().optional(),
+      })
+      .optional(),
+
+    // ───────────────── Token Limits ─────────────────
+    min_input_tokens: z
+      .number()
+      .optional()
+      .describe("Minimum max_input_tokens"),
+
+    min_output_tokens: z
+      .number()
+      .optional()
+      .describe("Minimum max_output_tokens"),
+
+    // ───────────────── Pricing Filters ─────────────────
+    pricing: z
+      .object({
+        // Token-based (chat / embedding / completion)
+        max_input_cost_per_token: z.number().optional(),
+        max_output_cost_per_token: z.number().optional(),
+
+        // Audio
+        max_input_cost_per_audio_token: z.number().optional(),
+      })
+      .optional(),
   }),
-  // Columns to make visible based on the query
-  showColumns: z.array(z.string()).optional().describe("Column keys to make visible"),
-  // Human-readable summary of the filters
-  summary: z.string().describe("Brief summary of applied filters for display"),
+
+  showColumns: z
+    .array(z.string())
+    .optional()
+    .describe("Column keys to show in table"),
+
+  summary: z
+    .string()
+    .describe("Human-readable summary of applied filters"),
 })
 
 export async function POST(req: Request) {
   const { query, metadata } = await req.json()
 
   try {
-    const { object } = await generateObject({
-      model: "openai/gpt-4o-mini",
-      schema: FilterSchema,
-      prompt: `You are a filter generator for an LLM model comparison table. Convert the user's natural language query into column filters.
+    const prompt = `You are a STRICT filter generator for an LLM model catalog.
 
-AVAILABLE DATA:
-- Providers (exact names): ${metadata.providers.slice(0, 50).join(", ")}${metadata.providers.length > 50 ? "..." : ""}
-- Modes: ${metadata.modes.join(", ")}
-- Context window range: ${metadata.contextRange.min.toLocaleString()} to ${metadata.contextRange.max.toLocaleString()} tokens
-- Input cost range: $${metadata.costRange.minInput.toFixed(4)} to $${metadata.costRange.maxInput.toFixed(2)} per 1M tokens
-- Output cost range: $${metadata.costRange.minOutput.toFixed(4)} to $${metadata.costRange.maxOutput.toFixed(2)} per 1M tokens
-- Models with vision: ${metadata.capabilityCounts.vision}
-- Models with audio: ${metadata.capabilityCounts.audio}
-- Models with function calling: ${metadata.capabilityCounts.functionCalling}
-- Models with reasoning: ${metadata.capabilityCounts.reasoning}
-- Models with web search: ${metadata.capabilityCounts.webSearch}
-- Models with prompt caching: ${metadata.capabilityCounts.promptCaching}
+Your task: Convert the USER QUERY into a structured filter object that matches the schema.
 
-USER QUERY: "${query}"
+IMPORTANT RULES:
+- ONLY use fields that exist in the schema.
+- DO NOT infer capabilities unless explicitly mentioned.
+- DO NOT add filters the user did not ask for.
+- Mode determines which pricing fields apply.
 
-COLUMN KEYS for showColumns:
-- provider, context, maxOutput, inputCost, outputCost
-- vision, audio, functionCalling, reasoning, webSearch, promptCaching, mode
+DATA CONTEXT:
+Providers: ${metadata.providers.slice(0, 50).join(", ")}${metadata.providers.length > 50 ? "..." : ""}
+Modes: ${metadata.modes.join(", ")}
+Context range: ${metadata.contextRange.min.toLocaleString()} - ${metadata.contextRange.max.toLocaleString()} tokens
+Cost range: $${metadata.costRange.minInput.toFixed(4)} - $${metadata.costRange.maxInput.toFixed(2)} per 1M input tokens
 
-INSTRUCTIONS:
-1. For "provider" filter: Return array of EXACT provider names from the list that MATCH the query. For example, if user says "google", include providers containing "google" like "google_ai_studio", "vertex_ai-chat-models", etc.
+USER QUERY:
+"${query}"
 
-2. For capability filters (vision, audio, functionCalling, reasoning, webSearch, promptCaching): Set to true ONLY if the user explicitly wants that capability.
+CAPABILITY MAPPING:
+- "vision" → supports.vision = true
+- "audio input" → supports.audio_input = true
+- "audio output / speech" → supports.audio_output = true
+- "function calling" / "tools" → supports.function_calling = true
+- "reasoning" → supports.reasoning = true
+- "web search" → supports.web_search = true
+- "prompt caching" / "caching" → supports.prompt_caching = true
+- "response schema" / "structured output" → supports.response_schema = true
 
-3. For "maxInputCost": Set a dollar amount per 1M tokens if user mentions budget/cheap/affordable (e.g., 1 for cheap, 5 for mid-range).
+PRICING RULES:
+- "cheap" → max_input_cost_per_token = 0.000001 (=$1/M tokens)
+- "very cheap" / "cheapest" → max_input_cost_per_token = 0.0000005 (=$0.5/M tokens)
+- "affordable" / "mid-range" → max_input_cost_per_token = 0.000005 (=$5/M tokens)
+- If mode=chat/completion/embedding, use token pricing
+- If mode=audio*, use audio token pricing
 
-4. For "minContext": Set token count if user mentions context size (e.g., 100000 for large context).
+CONTEXT RULES:
+- "large context" → min_input_tokens = 100000
+- "very large context" / "huge context" → min_input_tokens = 500000
+- "1M context" → min_input_tokens = 1000000
 
-5. For "showColumns": Include columns relevant to the query so user can see filtered data.
+PROVIDER MATCHING:
+- Match provider names by substring (e.g., "google" matches "google_ai_studio", "vertex_ai-chat-models")
+- "openai" matches "openai"
+- "anthropic" matches "anthropic"
+- "aws" / "bedrock" matches "bedrock"
+- "azure" matches "azure"
 
-6. For "summary": Write a brief description like "Google models with vision support" or "Cheap models under $1/M tokens".
+SHOW COLUMNS:
+Include only columns relevant to the query intent.
+Available: provider, context, maxOutput, inputCost, outputCost, vision, audio, functionCalling, reasoning, webSearch, promptCaching, mode
+
+SUMMARY:
+Write a short sentence like:
+- "Cheap chat models under $1/M tokens"
+- "Chat models with reasoning and large context"
+- "Google models with vision support"
 
 EXAMPLES:
-- "cheap vision models from google" -> 
-  {
-    filters: { provider: ["google_ai_studio", "vertex_ai-chat-models", ...all google providers], vision: true, maxInputCost: 1 },
-    showColumns: ["provider", "inputCost", "vision"],
-    summary: "Google models with vision, under $1/M tokens"
-  }
 
-- "models with reasoning" ->
-  {
-    filters: { reasoning: true },
-    showColumns: ["provider", "reasoning"],
-    summary: "Models with reasoning capability"
-  }
+Query: "cheap vision models from google"
+{
+  "filters": {
+    "provider": ["google_ai_studio", "vertex_ai-chat-models"],
+    "supports": { "vision": true },
+    "pricing": { "max_input_cost_per_token": 0.000001 }
+  },
+  "showColumns": ["provider", "inputCost", "vision"],
+  "summary": "Google models with vision under $1/M tokens"
+}
 
-- "openai chat models" ->
-  {
-    filters: { provider: ["openai"], mode: ["chat"] },
-    showColumns: ["provider", "mode"],
-    summary: "OpenAI chat models"
-  }
+Query: "large context chat models with reasoning"
+{
+  "filters": {
+    "mode": ["chat"],
+    "supports": { "reasoning": true },
+    "min_input_tokens": 100000
+  },
+  "showColumns": ["provider", "context", "reasoning"],
+  "summary": "Chat models with reasoning and large context"
+}
 
-Return only relevant filters. Don't include filters if the user didn't mention them.`,
+Query: "cheapest models with function calling"
+{
+  "filters": {
+    "supports": { "function_calling": true },
+    "pricing": { "max_input_cost_per_token": 0.0000005 }
+  },
+  "showColumns": ["provider", "inputCost", "functionCalling"],
+  "summary": "Low-cost models with function calling support"
+}
+
+Return ONLY valid JSON matching the schema.`
+
+    // Make direct API call to Ollama
+    const response = await fetch("https://ollama.com/api/chat", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.OLLAMA_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-oss:20b-cloud",
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        stream: false,
+      }),
     })
 
-    return Response.json(object)
+    if (!response.ok) {
+      throw new Error(`Ollama API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const content = data.message?.content
+
+    if (!content) {
+      throw new Error("No content in response")
+    }
+
+    // Parse JSON from the response
+    const jsonMatch = content.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      throw new Error("No JSON found in response")
+    }
+
+    const parsed = JSON.parse(jsonMatch[0])
+    const validated = FilterSchema.parse(parsed)
+
+    return Response.json(validated)
   } catch (error) {
     console.error("AI search error:", error)
     return Response.json({ filters: {}, summary: "Failed to parse query" }, { status: 500 })

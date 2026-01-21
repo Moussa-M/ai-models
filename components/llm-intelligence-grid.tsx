@@ -468,53 +468,59 @@ export function LLMIntelligenceGrid() {
       } = {}
       const appliedFilters: string[] = []
 
+      // Provider filter
       if (filters.provider && filters.provider.length > 0) {
         newColumnFilters.provider = filters.provider
         newColumnFilters._providerIncludeMode = true
         appliedFilters.push(`Provider: ${filters.provider.join(", ")}`)
       }
 
+      // Mode filter
       if (filters.mode && filters.mode.length > 0) {
         newColumnFilters.mode = filters.mode
         newColumnFilters._modeIncludeMode = true
         appliedFilters.push(`Mode: ${filters.mode.join(", ")}`)
       }
 
-      if (filters.vision === true) {
+      // Capability filters (nested under supports)
+      if (filters.supports?.vision === true) {
         newColumnFilters.vision = ["true"]
         appliedFilters.push("Vision: Yes")
       }
-      if (filters.audio === true) {
+      if (filters.supports?.audio_input === true || filters.supports?.audio_output === true) {
         newColumnFilters.audio = ["true"]
         appliedFilters.push("Audio: Yes")
       }
-      if (filters.functionCalling === true) {
+      if (filters.supports?.function_calling === true) {
         newColumnFilters.functionCalling = ["true"]
         appliedFilters.push("Functions: Yes")
       }
-      if (filters.reasoning === true) {
+      if (filters.supports?.reasoning === true) {
         newColumnFilters.reasoning = ["true"]
         appliedFilters.push("Reasoning: Yes")
       }
-      if (filters.webSearch === true) {
+      if (filters.supports?.web_search === true) {
         newColumnFilters.webSearch = ["true"]
         appliedFilters.push("Web Search: Yes")
       }
-      if (filters.promptCaching === true) {
+      if (filters.supports?.prompt_caching === true) {
         newColumnFilters.promptCaching = ["true"]
         appliedFilters.push("Caching: Yes")
       }
 
-      if (filters.maxInputCost) {
-        setMaxInputCostFilter(filters.maxInputCost)
-        appliedFilters.push(`Max Cost: $${filters.maxInputCost}/M`)
+      // Pricing filters (nested under pricing)
+      if (filters.pricing?.max_input_cost_per_token) {
+        const maxCostPerMillion = filters.pricing.max_input_cost_per_token * 1000000
+        setMaxInputCostFilter(maxCostPerMillion)
+        appliedFilters.push(`Max Cost: $${maxCostPerMillion.toFixed(2)}/M`)
       } else {
         setMaxInputCostFilter(null)
       }
 
-      if (filters.minContext) {
-        setMinContextFilter(filters.minContext)
-        appliedFilters.push(`Min Context: ${formatTokens(filters.minContext)}`)
+      // Context filters
+      if (filters.min_input_tokens) {
+        setMinContextFilter(filters.min_input_tokens)
+        appliedFilters.push(`Min Context: ${formatTokens(filters.min_input_tokens)}`)
       } else {
         setMinContextFilter(null)
       }
