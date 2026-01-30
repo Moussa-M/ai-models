@@ -199,13 +199,13 @@ export function LLMIntelligenceGrid() {
             const currentCached = await getCachedModels()
             await fetchModels(currentCached.dataHash)
           } catch (err) {
-            console.error("[v0] Auto-refresh error:", err)
+            console.error("[App] Auto-refresh error:", err)
           }
         },
         5 * 60 * 1000,
       )
     } catch (err) {
-      console.error("[v0] Initialization error:", err)
+      console.error("[App] Initialization error:", err)
       setError(err instanceof Error ? err.message : "Failed to load models")
       setIsLoading(false)
     }
@@ -228,7 +228,7 @@ export function LLMIntelligenceGrid() {
     try {
       await fetchModels()
     } catch (err) {
-      console.error("[v0] Refresh error:", err)
+      console.error("[App] Refresh error:", err)
     }
     setIsLoading(false)
     setForceRefreshTrigger(!forceRefreshTrigger)
@@ -555,7 +555,7 @@ export function LLMIntelligenceGrid() {
         newColumnFilters.provider = ["openai"]
         newColumnFilters._providerIncludeMode = true
         appliedFilters.push("Provider: OpenAI")
-      } else if (q.includes("anthropic") || q.includes("claude")) {
+      } else if (q.includes("anthropic")) {
         newColumnFilters.provider = ["anthropic"]
         newColumnFilters._providerIncludeMode = true
         appliedFilters.push("Provider: Anthropic")
