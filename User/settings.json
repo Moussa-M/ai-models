@@ -229,7 +229,7 @@
     "**/*.code-workspace": true,
     "**/.gitkeep": true,
     "**/.vscode": true,
-    "**/.v0-trash": true
+    "**/.trash": true
   },
   "explorer.confirmPasteNative": false
 }

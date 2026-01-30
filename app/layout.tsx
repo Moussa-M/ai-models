@@ -12,7 +12,7 @@ const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "ModelVault - LLM Price Explorer",
   description: "AI-Powered LLM Model Comparison Tool",
-  generator: "v0.app",
+  generator: "Next.js",
   icons: {
     icon: [
       {

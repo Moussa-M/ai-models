@@ -85,7 +85,7 @@ export async function getCachedModels(): Promise<{
       dataHash: dataHashResult?.value || null,
     }
   } catch (error) {
-    console.error("[v0] IndexedDB getCachedModels error:", error)
+    console.error("[App] IndexedDB getCachedModels error:", error)
     return { models: [], lastUpdated: null, dataHash: null }
   }
 }
@@ -119,9 +119,9 @@ export async function cacheModels(models: Model[], dataHash: string): Promise<vo
       metaTx.onerror = () => reject(metaTx.error)
     })
 
-    console.log("[v0] Cached", models.length, "models to IndexedDB")
+    console.log("[App] Cached", models.length, "models to IndexedDB")
   } catch (error) {
-    console.error("[v0] IndexedDB cacheModels error:", error)
+    console.error("[App] IndexedDB cacheModels error:", error)
   }
 }
 
@@ -139,7 +139,7 @@ export async function queryModelsByIndex(indexName: string, value: IDBValidKey |
       request.onerror = () => reject(request.error)
     })
   } catch (error) {
-    console.error("[v0] IndexedDB query error:", error)
+    console.error("[App] IndexedDB query error:", error)
     return []
   }
 }
@@ -166,8 +166,8 @@ export async function clearCache(): Promise<void> {
     const metaTx = db.transaction(META_STORE, "readwrite")
     metaTx.objectStore(META_STORE).clear()
 
-    console.log("[v0] IndexedDB cache cleared")
+    console.log("[App] IndexedDB cache cleared")
   } catch (error) {
-    console.error("[v0] IndexedDB clear error:", error)
+    console.error("[App] IndexedDB clear error:", error)
   }
 }
