@@ -58,11 +58,11 @@ export async function GET() {
         return true
       })
 
-    console.log("[v0] Total models parsed:", models.length)
+    console.log("[App] Total models parsed:", models.length)
 
     return NextResponse.json(models)
   } catch (error) {
-    console.error("[v0] Error fetching model data:", error)
+    console.error("[App] Error fetching model data:", error)
     return NextResponse.json({ error: "Failed to fetch model data" }, { status: 500 })
   }
 }

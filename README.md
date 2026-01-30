@@ -1,30 +1,39 @@
 # AI Intelligence Grid
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+A comprehensive, interactive grid for exploring and comparing AI language models across different providers.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/apertacodex-dev/v0-ai-intelligence-grid)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/hB12aiZZYgU)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/apertacodex-dev/ai-intelligence-grid)
 
 ## Overview
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+This application provides a powerful interface for browsing and filtering AI models from various providers including OpenAI, Anthropic, Google, and more. Features include advanced filtering, sorting, and comparison capabilities.
+
+## Features
+
+- Browse AI models from multiple providers
+- Advanced filtering by provider, capabilities, pricing, and context length
+- Real-time search and AI-powered query support
+- Interactive data grid with customizable columns
+- Dark mode support
+- IndexedDB caching for improved performance
 
 ## Deployment
 
-Your project is live at:
+Your project is deployed and live on Vercel.
 
-**[https://vercel.com/apertacodex-dev/v0-ai-intelligence-grid](https://vercel.com/apertacodex-dev/v0-ai-intelligence-grid)**
+## Tech Stack
 
-## Build your app
+- Next.js
+- React
+- TypeScript
+- IndexedDB for client-side caching
+- Vercel for deployment
 
-Continue building your app on:
+## Development
 
-**[https://v0.app/chat/hB12aiZZYgU](https://v0.app/chat/hB12aiZZYgU)**
+```bash
+npm install
+npm run dev
+```
 
-## How It Works
-
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+Visit `http://localhost:3000` to view the application.
