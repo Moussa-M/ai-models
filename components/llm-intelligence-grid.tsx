@@ -4,15 +4,13 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import { Header } from "./llm-grid/header"
 import { SearchBar } from "./llm-grid/search-bar"
 import { AIFeedbackBar } from "./llm-grid/ai-feedback-bar"
-import { CostCalculator } from "./llm-grid/cost-calculator"
 import { ModelTable } from "./llm-grid/model-table"
 import { ModelDetailPanel } from "./llm-grid/model-detail-panel"
 import type { Model } from "@/lib/models-data"
 import type { ColumnConfig } from "./llm-grid/column-visibility"
 import { getCachedModels, cacheModels, generateDataHash } from "@/lib/indexed-db"
 
-export type ViewMode = "specs" | "calculator"
-export type SortKey = keyof Model | "projected_cost"
+export type SortKey = keyof Model
 export type SortDirection = "asc" | "desc"
 
 export interface SortConfig {
@@ -45,7 +43,6 @@ const STORAGE_KEYS = {
   columns: "ai-models-columns",
   columnFilters: "ai-models-column-filters",
   sortConfigs: "ai-models-sort-configs",
-  viewMode: "ai-models-view-mode",
   darkMode: "ai-models-dark-mode",
 }
 
@@ -75,11 +72,8 @@ export function LLMIntelligenceGrid() {
   const [lastUpdated, setLastUpdated] = useState<number | null>(null)
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  const [viewMode, setViewMode] = useState<ViewMode>("specs")
   const [sortConfigs, setSortConfigs] = useState<SortConfig[]>([{ key: "id", direction: "asc" }])
   const [selectedModel, setSelectedModel] = useState<Model | null>(null)
-  const [inputTokens, setInputTokens] = useState(1000000)
-  const [outputTokens, setOutputTokens] = useState(200000)
   const [isSearching, setIsSearching] = useState(false)
   const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({})
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS)
@@ -99,9 +93,6 @@ export function LLMIntelligenceGrid() {
 
     const storedSort = getStoredValue<SortConfig[]>(STORAGE_KEYS.sortConfigs, [{ key: "id", direction: "asc" }])
     setSortConfigs(storedSort)
-
-    const storedViewMode = getStoredValue<ViewMode>(STORAGE_KEYS.viewMode, "specs")
-    setViewMode(storedViewMode)
 
     const storedDarkMode = getStoredValue<boolean>(STORAGE_KEYS.darkMode, false)
     setIsDarkMode(storedDarkMode)
@@ -129,12 +120,6 @@ export function LLMIntelligenceGrid() {
       localStorage.setItem(STORAGE_KEYS.sortConfigs, JSON.stringify(sortConfigs))
     }
   }, [sortConfigs, isHydrated])
-
-  useEffect(() => {
-    if (isHydrated) {
-      localStorage.setItem(STORAGE_KEYS.viewMode, JSON.stringify(viewMode))
-    }
-  }, [viewMode, isHydrated])
 
   useEffect(() => {
     if (isHydrated) {
@@ -344,15 +329,8 @@ export function LLMIntelligenceGrid() {
         let aVal: number | string | boolean
         let bVal: number | string | boolean
 
-        if (key === "projected_cost") {
-          const aCost = (a.input_cost_per_token || 0) * inputTokens + (a.output_cost_per_token || 0) * outputTokens
-          const bCost = (b.input_cost_per_token || 0) * inputTokens + (b.output_cost_per_token || 0) * outputTokens
-          aVal = aCost
-          bVal = bCost
-        } else {
-          aVal = a[key] ?? ""
-          bVal = b[key] ?? ""
-        }
+        aVal = a[key] ?? ""
+        bVal = b[key] ?? ""
 
         let comparison = 0
         if (typeof aVal === "string" && typeof bVal === "string") {
@@ -371,7 +349,7 @@ export function LLMIntelligenceGrid() {
     })
 
     return filtered
-  }, [models, sortConfigs, inputTokens, outputTokens, columnFilters, maxInputCostFilter, minContextFilter])
+  }, [models, sortConfigs, columnFilters, maxInputCostFilter, minContextFilter])
 
   const handleSort = (key: SortKey, addToExisting: boolean) => {
     setSortConfigs((prev) => {
@@ -656,8 +634,6 @@ export function LLMIntelligenceGrid() {
       <main className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <SearchBar
           onSearch={handleAISearch}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
           columns={columns}
           setColumns={setColumns}
           isLoading={isSearching}
@@ -671,23 +647,12 @@ export function LLMIntelligenceGrid() {
             onClear={clearAIFilters}
           />
         )}
-        {viewMode === "calculator" && (
-          <CostCalculator
-            inputTokens={inputTokens}
-            outputTokens={outputTokens}
-            setInputTokens={setInputTokens}
-            setOutputTokens={setOutputTokens}
-          />
-        )}
         <ModelTable
           models={filteredAndSortedModels}
-          viewMode={viewMode}
           sortConfigs={sortConfigs}
           onSort={handleSort}
           selectedModel={selectedModel}
           onSelectModel={setSelectedModel}
-          inputTokens={inputTokens}
-          outputTokens={outputTokens}
           columnFilters={columnFilters}
           onColumnFilterChange={handleColumnFilterChange}
           uniqueProviders={uniqueProviders}

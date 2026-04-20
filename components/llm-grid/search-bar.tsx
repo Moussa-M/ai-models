@@ -2,14 +2,11 @@
 
 import type React from "react"
 import { useState } from "react"
-import type { ViewMode } from "../llm-intelligence-grid"
 import type { ColumnConfig } from "./column-visibility"
 import { ColumnVisibility } from "./column-visibility"
 
 interface SearchBarProps {
   onSearch: (query: string) => void
-  viewMode: ViewMode
-  setViewMode: (v: ViewMode) => void
   columns: ColumnConfig[]
   setColumns: (columns: ColumnConfig[]) => void
   isLoading: boolean
@@ -19,8 +16,6 @@ interface SearchBarProps {
 
 export function SearchBar({
   onSearch,
-  viewMode,
-  setViewMode,
   columns,
   setColumns,
   isLoading,
@@ -105,34 +100,6 @@ export function SearchBar({
           </button>
         )}
         <ColumnVisibility columns={columns} onColumnChange={setColumns} />
-        <div className="flex items-center bg-secondary rounded-lg p-1 w-full md:w-auto">
-          <button
-            onClick={() => setViewMode("specs")}
-            className={`flex-1 md:flex-none px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-              viewMode === "specs" ? "shadow-sm bg-card text-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Specs
-          </button>
-          <button
-            onClick={() => setViewMode("calculator")}
-            className={`flex-1 md:flex-none px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-1 ${
-              viewMode === "calculator"
-                ? "shadow-sm bg-card text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-              />
-            </svg>
-            Cost Proj.
-          </button>
-        </div>
       </div>
     </div>
   )

@@ -1,7 +1,7 @@
 "use client"
 
 import type { Model } from "@/lib/models-data"
-import type { ViewMode, SortKey, SortConfig } from "../llm-intelligence-grid"
+import type { SortKey, SortConfig } from "../llm-intelligence-grid"
 import type { ColumnConfig } from "./column-visibility"
 import { ProviderLogo } from "./provider-logo"
 import { ColumnFilter } from "./column-filter"
@@ -9,9 +9,6 @@ import { Check, X, ChevronUp, ChevronDown } from "lucide-react"
 
 interface ModelTableProps {
   models: Model[]
-  viewMode: ViewMode
-  inputTokens: number
-  outputTokens: number
   onSort: (key: SortKey, addToExisting: boolean) => void
   sortConfigs: SortConfig[]
   selectedModel?: Model | null
@@ -24,9 +21,6 @@ interface ModelTableProps {
 
 export function ModelTable({
   models,
-  viewMode,
-  inputTokens,
-  outputTokens,
   onSort,
   sortConfigs,
   selectedModel,
@@ -50,12 +44,6 @@ export function ModelTable({
     if (!cost) return "-"
     const perMillion = cost * 1000000
     return `$${perMillion.toFixed(2)}`
-  }
-
-  const calculateProjectedCost = (model: Model) => {
-    const inCost = (model.input_cost_per_token || 0) * inputTokens
-    const outCost = (model.output_cost_per_token || 0) * outputTokens
-    return inCost + outCost
   }
 
   const getProviderClass = (provider: string) => {
@@ -245,32 +233,21 @@ export function ModelTable({
                 sortKeyProp="max_output_tokens"
               />
             )}
-            {viewMode === "specs" && (
-              <>
-                {isColumnVisible("inputCost") && (
-                  <FilterableHeader
-                    column="inputCost"
-                    label="In $/1M"
-                    values={uniqueInputCosts}
-                    sortKeyProp="input_cost_per_token"
-                  />
-                )}
-                {isColumnVisible("outputCost") && (
-                  <FilterableHeader
-                    column="outputCost"
-                    label="Out $/1M"
-                    values={uniqueOutputCosts}
-                    sortKeyProp="output_cost_per_token"
-                  />
-                )}
-              </>
+            {isColumnVisible("inputCost") && (
+              <FilterableHeader
+                column="inputCost"
+                label="In $/1M"
+                values={uniqueInputCosts}
+                sortKeyProp="input_cost_per_token"
+              />
             )}
-            {viewMode === "calculator" && (
-              <th onClick={(e) => onSort("projected_cost", e.shiftKey)} className="p-0 min-w-[150px]">
-                <div className="px-4 py-3 hover:bg-primary/20 cursor-pointer flex items-center justify-between group sticky top-0 bg-primary/10 backdrop-blur-sm border-b border-primary/20 text-primary">
-                  Est. Cost <SortIcon sortKey="projected_cost" />
-                </div>
-              </th>
+            {isColumnVisible("outputCost") && (
+              <FilterableHeader
+                column="outputCost"
+                label="Out $/1M"
+                values={uniqueOutputCosts}
+                sortKeyProp="output_cost_per_token"
+              />
             )}
             {isColumnVisible("vision") && (
               <FilterableHeader column="vision" label="Vision" values={["true", "false"]} filterType="boolean" center />
@@ -350,20 +327,11 @@ export function ModelTable({
                   {formatTokens(model.max_output_tokens)}
                 </td>
               )}
-              {viewMode === "specs" && (
-                <>
-                  {isColumnVisible("inputCost") && (
-                    <td className="px-4 py-3 font-mono text-xs">{formatCost(model.input_cost_per_token)}</td>
-                  )}
-                  {isColumnVisible("outputCost") && (
-                    <td className="px-4 py-3 font-mono text-xs">{formatCost(model.output_cost_per_token)}</td>
-                  )}
-                </>
+              {isColumnVisible("inputCost") && (
+                <td className="px-4 py-3 font-mono text-xs">{formatCost(model.input_cost_per_token)}</td>
               )}
-              {viewMode === "calculator" && (
-                <td className="px-4 py-3 font-mono text-xs font-bold text-primary bg-primary/5">
-                  ${calculateProjectedCost(model).toFixed(2)}
-                </td>
+              {isColumnVisible("outputCost") && (
+                <td className="px-4 py-3 font-mono text-xs">{formatCost(model.output_cost_per_token)}</td>
               )}
               {isColumnVisible("vision") && <BooleanCell value={model.supports_vision} />}
               {isColumnVisible("audio") && (
