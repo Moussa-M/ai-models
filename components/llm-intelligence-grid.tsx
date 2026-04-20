@@ -332,6 +332,14 @@ export function LLMIntelligenceGrid() {
     }
 
     filtered.sort((a, b) => {
+      const aHasNoPricing = !(a.input_cost_per_token && a.input_cost_per_token > 0) && !(a.output_cost_per_token && a.output_cost_per_token > 0)
+      const bHasNoPricing = !(b.input_cost_per_token && b.input_cost_per_token > 0) && !(b.output_cost_per_token && b.output_cost_per_token > 0)
+
+      // Always push free/open-source models without both input+output pricing to the end.
+      if (aHasNoPricing !== bHasNoPricing) {
+        return aHasNoPricing ? 1 : -1
+      }
+
       for (const { key, direction } of sortConfigs) {
         let aVal: number | string | boolean
         let bVal: number | string | boolean
