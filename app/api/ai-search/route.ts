@@ -181,7 +181,7 @@ Return ONLY valid JSON matching the schema.`
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-oss:20b-cloud",
+        model: "gemma4:31b",
         messages: [
           {
             role: "user",
